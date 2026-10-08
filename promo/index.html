@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>THE 5R VILLA — Admin Promo Cloud</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+body{background:#f8fafc;color:#0f172a}
+.panel{box-shadow:0 24px 70px rgba(15,23,42,.12)}
+</style>
+</head>
+<body class="min-h-screen p-4 md:p-8">
+<div class="max-w-4xl mx-auto">
+  <div class="flex items-center justify-between mb-4">
+    <a href="/" class="font-bold">🏡 THE 5R VILLA</a>
+    <div class="flex gap-2"><a href="/" class="px-4 py-2 bg-white rounded-full shadow">Website</a></div>
+  </div>
+  <header class="rounded-3xl bg-slate-950 text-white p-6 md:p-8 mb-6">
+    <h1 class="text-3xl md:text-4xl font-extrabold">💰 Admin Promo Cloud</h1>
+    <p class="text-slate-300 mt-2">Harga hanya dianggap berjaya selepas disimpan dan dibaca semula dari Firestore.</p>
+  </header>
+
+  <section class="panel bg-white rounded-3xl p-6 mb-6">
+    <h2 class="text-2xl font-bold mb-4">🔐 Login Admin</h2>
+    <div id="authBox" class="grid md:grid-cols-2 gap-3">
+      <input id="email" type="email" class="border rounded-xl p-3" placeholder="Email admin">
+      <input id="password" type="password" class="border rounded-xl p-3" placeholder="Password">
+      <button id="loginBtn" class="bg-slate-950 text-white rounded-xl p-3 font-bold">Login</button>
+      <button id="logoutBtn" class="bg-slate-200 rounded-xl p-3 font-bold">Logout</button>
+    </div>
+    <div id="authStatus" class="mt-4 rounded-xl p-3 bg-slate-100">Belum login.</div>
+  </section>
+
+  <section class="panel bg-white rounded-3xl p-6 mb-6">
+    <div class="flex items-center justify-between gap-3 mb-4">
+      <h2 class="text-2xl font-bold">Harga Semasa Cloud</h2>
+      <button id="reloadBtn" class="px-4 py-2 rounded-xl bg-slate-100 font-semibold">Muat Semula</button>
+    </div>
+    <div id="cloudStatus" class="text-sm mb-4 text-slate-500">Belum dimuatkan.</div>
+    <div class="grid md:grid-cols-2 gap-4">
+      <div class="rounded-2xl bg-blue-700 text-white p-5"><div class="text-sm">Weekday</div><div id="cloudWeekday" class="text-3xl font-bold mt-2">—</div></div>
+      <div class="rounded-2xl bg-blue-700 text-white p-5"><div class="text-sm">Weekend / Holiday</div><div id="cloudWeekend" class="text-3xl font-bold mt-2">—</div></div>
+    </div>
+  </section>
+
+  <section class="panel bg-white rounded-3xl p-6">
+    <h2 class="text-2xl font-bold mb-5">Tetapan Promo</h2>
+    <div class="grid md:grid-cols-2 gap-4">
+      <label class="font-semibold">Harga Asal Weekday<input id="weekdayOriginal" type="number" class="w-full mt-2 border rounded-xl p-3"></label>
+      <label class="font-semibold">Harga Asal Weekend<input id="weekendOriginal" type="number" class="w-full mt-2 border rounded-xl p-3"></label>
+      <label class="font-semibold">Harga Promo Weekday<input id="weekdayPromo" type="number" class="w-full mt-2 border rounded-xl p-3"></label>
+      <label class="font-semibold">Harga Promo Weekend<input id="weekendPromo" type="number" class="w-full mt-2 border rounded-xl p-3"></label>
+      <label class="font-semibold">Tarikh Tamat Promo<input id="promoEndDate" type="date" class="w-full mt-2 border rounded-xl p-3"></label>
+      <label class="font-semibold flex items-center gap-3 mt-7"><input id="promoEnabled" type="checkbox" class="w-5 h-5"> Promosi ON</label>
+      <label class="font-semibold md:col-span-2">Tajuk Promosi<input id="promoTitle" class="w-full mt-2 border rounded-xl p-3"></label>
+      <label class="font-semibold md:col-span-2">Nota Promo<textarea id="promoNote" rows="3" class="w-full mt-2 border rounded-xl p-3"></textarea></label>
+    </div>
+    <button id="saveBtn" class="w-full mt-6 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl p-4 text-lg font-bold">Simpan Harga Promo</button>
+    <div id="saveStatus" class="mt-4 rounded-xl p-3 bg-slate-100">Sedia.</div>
+  </section>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
+import { getFirestore, doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+
+const firebaseConfig={
+ apiKey:"AIzaSyCFL1cy0n6GrzAXRh8prnyOiaLKBUUXkzM",
+ authDomain:"the-5r-villa-v2.firebaseapp.com",
+ projectId:"the-5r-villa-v2",
+ storageBucket:"the-5r-villa-v2.firebasestorage.app",
+ messagingSenderId:"907809196867"
+};
+const ADMIN_UID="BPTDvhc0GDTou8bfInKmb4ZRfSF2";
+const app=initializeApp(firebaseConfig), auth=getAuth(app), db=getFirestore(app);
+const $=id=>document.getElementById(id), ref=doc(db,"websiteSettings","pricing");
+
+function status(id,msg,ok=true){const e=$(id);e.textContent=msg;e.className="mt-4 rounded-xl p-3 "+(ok?"bg-emerald-50 text-emerald-800":"bg-red-50 text-red-700");}
+function fill(d={}){
+ $("weekdayOriginal").value=d.weekdayOriginal ?? d.weekday ?? 700;
+ $("weekendOriginal").value=d.weekendOriginal ?? d.weekend ?? 800;
+ $("weekdayPromo").value=d.weekdayPromo ?? d.promoWeekday ?? 650;
+ $("weekendPromo").value=d.weekendPromo ?? d.promoWeekend ?? 750;
+ $("promoEnabled").checked=d.promoEnabled===true || d.promoOn===true;
+ $("promoEndDate").value=d.promoEndDate || "";
+ $("promoTitle").value=d.promoTitle || "Promosi THE 5R VILLA";
+ $("promoNote").value=d.promoNote || "Harga promosi tertakluk kepada tarikh dan kekosongan.";
+ const on=$("promoEnabled").checked;
+ $("cloudWeekday").textContent="RM"+Number(on?$("weekdayPromo").value:$("weekdayOriginal").value).toLocaleString();
+ $("cloudWeekend").textContent="RM"+Number(on?$("weekendPromo").value:$("weekendOriginal").value).toLocaleString();
+}
+async function load(){
+ $("cloudStatus").textContent="MEMUAT...";
+ try{
+   const s=await getDoc(ref);
+   if(s.exists()){fill(s.data());$("cloudStatus").textContent="✓ Data Firestore berjaya dibaca.";}
+   else{$("cloudStatus").textContent="Dokumen pricing belum wujud.";fill();}
+ }catch(e){
+   $("cloudStatus").textContent="✕ Gagal baca Firestore: "+(e?.code||e?.message||e);
+ }
+}
+$("loginBtn").onclick=async()=>{try{await signInWithEmailAndPassword(auth,$("email").value.trim(),$("password").value);status("authStatus","✓ Login berjaya.");}catch(e){status("authStatus","✕ Login gagal: "+(e?.code||e?.message||e),false)}};
+$("logoutBtn").onclick=()=>signOut(auth);
+$("reloadBtn").onclick=load;
+$("saveBtn").onclick=async()=>{
+ if(!auth.currentUser){status("saveStatus","Sila login dahulu.",false);return;}
+ if(auth.currentUser.uid!==ADMIN_UID){status("saveStatus","Akaun ini bukan Admin yang dibenarkan.",false);return;}
+ const payload={
+   weekdayOriginal:Number($("weekdayOriginal").value||0),
+   weekendOriginal:Number($("weekendOriginal").value||0),
+   weekdayPromo:Number($("weekdayPromo").value||0),
+   weekendPromo:Number($("weekendPromo").value||0),
+   promoEnabled:$("promoEnabled").checked,
+   promoEndDate:$("promoEndDate").value||"",
+   promoTitle:$("promoTitle").value.trim(),
+   promoNote:$("promoNote").value.trim(),
+   updatedAt:serverTimestamp()
+ };
+ try{
+   status("saveStatus","Menyimpan...");
+   await setDoc(ref,payload,{merge:true});
+   const verify=await getDoc(ref);
+   if(!verify.exists()) throw new Error("Data tidak dapat dibaca semula selepas simpan.");
+   fill(verify.data());
+   status("saveStatus","✓ BERJAYA — data disimpan dan disahkan semula dari Firestore.");
+ }catch(e){status("saveStatus","✕ Gagal simpan/verify: "+(e?.code||e?.message||e),false);}
+};
+onAuthStateChanged(auth,u=>{
+ if(u){$("email").value=u.email||"";status("authStatus","✓ LOGIN BERJAYA — "+(u.email||u.uid));}
+ else status("authStatus","Belum login.",false);
+ load();
+});
+</script>
+</body></html>

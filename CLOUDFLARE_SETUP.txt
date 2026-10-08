@@ -1,0 +1,20 @@
+THE 5R VILLA — GUEST WEBSITE + PROMO ON CLOUDFLARE PAGES
+
+Repository: mredzuanzprop2311/the-5r-villa
+Branch: main
+Production entry: index.html
+Promo route: /promo/
+
+Cloudflare Pages setup:
+- Framework preset: None
+- Build command: leave blank
+- Build output directory: /
+- Root directory: /
+
+Firebase:
+- Project: the-5r-villa-v2
+- Public pricing document: websiteSettings/pricing
+
+IMPORTANT:
+Firestore rules must permit public READ for websiteSettings/pricing and authenticated admin WRITE for the approved admin UID.
+Do not store Firebase passwords or private iCal URLs in this repository.

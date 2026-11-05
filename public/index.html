@@ -1,0 +1,548 @@
+<!doctype html>
+<html lang="ms">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>THE 5R VILLA - Calendar V2.1 Click-to-Booking</title>
+<style>
+*{box-sizing:border-box}body{font-family:Arial,sans-serif;background:#f4f7fb;margin:0;color:#172033}
+.wrap{max-width:900px;margin:25px auto;padding:16px}.card{background:#fff;padding:22px;border-radius:18px;box-shadow:0 8px 24px #0001}
+h1{margin-bottom:4px}.sub{color:#667085}.nav{display:flex;align-items:center;justify-content:center;gap:10px;margin:20px 0}
+.nav button{border:0;border-radius:9px;padding:9px 13px;background:#17365d;color:#fff;cursor:pointer}.month{min-width:180px;text-align:center;font-weight:700}
+.head,.calendar{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;width:100%;align-items:stretch}.head div{text-align:center;font-weight:700;font-size:13px;padding:7px 0;min-width:0;white-space:nowrap;overflow:hidden}
+.day{min-height:82px;min-width:0;border:1px solid #e4e7ec;border-radius:10px;padding:7px;background:#ecfdf3;position:relative;text-align:left;overflow:hidden}
+.day.empty{background:#f9fafb;border-color:#f2f4f7}.day.booked{background:#fff1f0;border-color:#fda29b}.day.today{outline:2px solid #fdb022}
+.num{font-weight:700}.state{font-size:11px;margin-top:8px;font-weight:700}.availableTxt{color:#027a48}.bookedTxt{color:#b42318}
+.legend{display:flex;gap:14px;flex-wrap:wrap;margin:16px 0;font-size:13px}.dot{width:12px;height:12px;border-radius:50%;display:inline-block;margin-right:5px}
+.green{background:#12b76a}.red{background:#f04438}.yellow{background:#fdb022}
+.status{margin-top:16px;padding:12px;border-radius:10px;background:#f2f4f7}.err{background:#fef3f2;color:#b42318}
+.privacy{margin-top:16px;font-size:12px;color:#667085;line-height:1.5}
+@media(max-width:650px){
+  .wrap{padding:10px;margin:12px auto}
+  .card{padding:14px}
+  .head,.calendar{gap:4px}
+  .head div{font-size:9px;padding:6px 0;letter-spacing:-.2px}
+  .day{min-height:64px;padding:5px 3px;border-radius:8px}
+  .num{font-size:14px;text-align:left;padding-left:1px}
+  .state{font-size:8px;margin-top:7px;letter-spacing:-.2px;text-align:center}
+}
+@media(max-width:390px){
+  .head div{font-size:8px}
+  .day{min-height:60px;padding:4px 2px}
+  .state{font-size:7px}
+}
+@media(max-width:430px){
+  .head div{font-size:0}
+  .head div::after{content:attr(data-short);font-size:9px}
+}
+</style>
+<style id="v2final-style">
+#calendarStatus{
+  margin:10px 0 0;
+  padding:10px 12px;
+  border-radius:10px;
+  font-size:13px;
+  font-weight:700;
+  background:#f8fafc;
+  border:1px solid #e5e7eb;
+  color:#475569;
+}
+#calendarStatus.ok{background:#ecfdf5;border-color:#bbf7d0;color:#166534}
+#calendarStatus.warn{background:#fff7ed;border-color:#fed7aa;color:#9a3412}
+#calendarStatus.bad{background:#fef2f2;border-color:#fecaca;color:#991b1b}
+</style>
+
+
+<style id="booking-form-style">
+.day.available-click{cursor:pointer;transition:transform .12s ease,box-shadow .12s ease,border-color .12s ease}
+.day.available-click:hover{transform:translateY(-1px);box-shadow:0 7px 18px rgba(2,122,72,.14);border-color:#12b76a}
+.day.available-click:active{transform:scale(.98)}
+.day.past{cursor:default;opacity:.62}
+.bookingHint{margin:10px 0 2px;padding:10px 12px;border-radius:10px;background:#ecfdf5;border:1px solid #bbf7d0;color:#166534;font-size:13px;font-weight:700}
+#bookingModal{display:none;position:fixed;inset:0;z-index:2147483646;background:rgba(0,0,0,.72);overflow:auto;padding:14px}
+#bookingModal.open{display:block}
+.bookingBox{max-width:650px;margin:28px auto;background:#fff;border-radius:20px;padding:22px;box-shadow:0 20px 60px rgba(0,0,0,.35);position:relative}
+.bookingClose{position:absolute;right:14px;top:10px;border:0;background:none;font-size:30px;line-height:1;cursor:pointer;color:#475467}
+.bookingTitle{font-size:24px;margin:0 36px 5px 0}.bookingSub{color:#667085;font-size:14px;line-height:1.45;margin-bottom:18px}
+.bookingGrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.bookingGrid label{font-size:13px;font-weight:700;color:#344054}.bookingGrid input{width:100%;padding:11px;border:1px solid #d0d5dd;border-radius:10px;margin-top:5px;font:inherit}.bookingGrid input:focus{outline:2px solid #a7f3d0;border-color:#12b76a}
+.bookingInfo{margin-top:12px;padding:11px 12px;border-radius:10px;background:#f8fafc;border:1px solid #e2e8f0;font-size:13px}
+.bookingLive{margin-top:10px;padding:12px;border-radius:10px;font-size:13px;font-weight:700;background:#f8fafc;border:1px solid #cbd5e1;color:#475569;line-height:1.45}
+.bookingSubmit{width:100%;margin-top:14px;border:0;border-radius:11px;padding:13px;background:#0f766e;color:#fff;font-weight:800;font-size:15px;cursor:pointer}.bookingSubmit:disabled{opacity:.5;cursor:not-allowed}
+.bookingFoot{font-size:11px;color:#667085;margin-top:9px;line-height:1.45}
+@media(max-width:650px){.bookingBox{margin:12px auto;padding:18px}.bookingGrid{grid-template-columns:1fr}.bookingTitle{font-size:21px}}
+</style>
+</head>
+<body><div class="wrap"><div class="card">
+<h1>THE 5R VILLA</h1>
+<div class="sub">Semak Tarikh Kekosongan • Live Calendar</div>
+<!-- V2.12 Mobile Alignment Fix -->
+<div class="legend"><span><i class="dot green"></i>Available</span><span><i class="dot red"></i>Booked</span><span><i class="dot yellow"></i>Hari ini</span></div>
+<div class="nav"><button id="prev">←</button><div id="month" class="month"></div><button id="next">→</button></div>
+<div class="head">
+  <div data-short="Ahd">Ahad</div>
+  <div data-short="Isn">Isnin</div>
+  <div data-short="Sel">Selasa</div>
+  <div data-short="Rab">Rabu</div>
+  <div data-short="Kha">Khamis</div>
+  <div data-short="Jum">Jumaat</div>
+  <div data-short="Sab">Sabtu</div>
+</div>
+<div id="calendar" class="calendar"></div>
+<div id="calendarStatus">Memuatkan Direct + Airbnb...</div>
+<div id="airbnbDiagnostic" style="margin-top:8px;font-size:12px;color:#7c2d12"></div>
+<div id="status" class="status">Memuatkan tarikh...</div>
+<div class="bookingHint">📅 Tekan mana-mana tarikh <b>AVAILABLE</b> untuk terus buka borang Semak Tempahan.</div>
+<div class="privacy">Untuk privasi tetamu, halaman ini hanya memaparkan status tarikh. Nama, nombor telefon, platform, harga dan maklumat bayaran tidak dipaparkan.</div>
+</div></div>
+
+<div id="bookingModal" aria-hidden="true">
+  <div class="bookingBox" role="dialog" aria-modal="true" aria-labelledby="bookingTitle">
+    <button id="bookingClose" class="bookingClose" type="button" aria-label="Tutup">×</button>
+    <h2 id="bookingTitle" class="bookingTitle">Semak Tempahan THE 5R VILLA</h2>
+    <div class="bookingSub">Tarikh AVAILABLE yang ditekan akan menjadi Check-in. Lengkapkan maklumat tetamu dan sistem akan semak semula Direct + Airbnb sebelum permintaan dihantar ke Admin.</div>
+    <form id="bookingForm">
+      <div class="bookingGrid">
+        <label>Nama
+          <input id="bookingName" placeholder="Contoh: Aiman" required>
+        </label>
+        <label>Telefon
+          <input id="bookingPhone" inputmode="tel" placeholder="Contoh: 0123456789" required>
+        </label>
+        <label>Tinggal di mana
+          <input id="bookingResidence" placeholder="Contoh: Kuala Lumpur" required>
+        </label>
+        <label>Jumlah Tetamu
+          <input id="bookingGuests" type="number" min="1" value="1" required>
+        </label>
+        <label>Check-in
+          <input id="bookingCheckIn" type="date" required>
+        </label>
+        <label>Check-out
+          <input id="bookingCheckOut" type="date" required>
+        </label>
+      </div>
+      <div id="bookingNights" class="bookingInfo">Jumlah malam: <b>1</b></div>
+      <div id="bookingLiveStatus" class="bookingLive">🔄 Semak Direct + Airbnb...</div>
+      <div class="bookingFoot">Permintaan akan direkod sebagai <b>PENDING</b>. Tempahan hanya sah selepas Admin THE 5R VILLA membuat pengesahan.</div>
+      <button id="bookingSubmit" class="bookingSubmit" type="submit">Teruskan Booking WhatsApp</button>
+    </form>
+  </div>
+</div>
+
+<script type="module">
+import{initializeApp}from"https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
+import{getFirestore,collection,onSnapshot,addDoc,serverTimestamp}from"https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
+
+const firebaseConfig={
+apiKey:"AIzaSyCFL1cy0n6GrzAXRh8prnyOiaLKBUUXkzM",
+authDomain:"the-5r-villa-v2.firebaseapp.com",
+projectId:"the-5r-villa-v2",
+storageBucket:"the-5r-villa-v2.firebasestorage.app",
+messagingSenderId:"907809196867",
+appId:"1:907809196867:web:b030f3636e6dcef3f83df6",
+measurementId:"G-0BH80KPN87"};
+
+const app=initializeApp(firebaseConfig),db=getFirestore(app);
+const $=id=>document.getElementById(id);
+
+let firestoreData=[];
+let mirroredAirbnbData=[];
+let airbnbData=[];
+let airbnbLiveOk=false;
+let view=new Date();
+let airbnbTimer=null;
+let directLive=true;
+
+const iso=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+const ADMIN_WHATSAPP="60122544639";
+const ADMIN_URL="https://the5rvilla-admin.pages.dev/";
+
+function addDaysISO(dateStr,days){
+  const [y,m,d]=String(dateStr).split("-").map(Number);
+  const x=new Date(y,m-1,d);
+  x.setDate(x.getDate()+days);
+  return iso(x);
+}
+
+$("prev").onclick=()=>{view.setMonth(view.getMonth()-1);render()};
+$("next").onclick=()=>{view.setMonth(view.getMonth()+1);render()};
+
+
+function setCalendarStatus(message,type=""){
+  const el=document.getElementById("calendarStatus");
+  if(!el) return;
+  el.textContent=message;
+  el.className=type||"";
+}
+
+
+function calendarSourceStatus(){
+  const airbnbCount=airbnbLiveOk ? airbnbData.length : mirroredAirbnbData.length;
+  const airbnbLabel=airbnbLiveOk ? "Airbnb Live" : "Airbnb Firebase";
+
+  if(firestoreData.length===0){
+    return {
+      message:`Direct belum disync • ${airbnbLabel} ${airbnbCount}`,
+      type:"warn"
+    };
+  }
+
+  return {
+    message:`Live Calendar aktif • Direct ${firestoreData.length} • ${airbnbLabel} ${airbnbCount}`,
+    type:"ok"
+  };
+}
+
+function setStatus(message,isError=false){
+  $("status").className=isError?"status err":"status";
+  $("status").textContent=message;
+}
+
+function normalizeRecord(d){
+  return {
+    checkIn:String(d.checkIn||""),
+    checkOut:String(d.checkOut||""),
+    status:String(d.status||"booked").toLowerCase(),
+    source:String(d.source||d.platform||"").toLowerCase()
+  };
+}
+
+/* DIRECT / FIRESTORE:
+   Listen in realtime. Any Direct booking mirrored into publicAvailability
+   appears automatically without browser refresh. */
+onSnapshot(
+  collection(db,"publicAvailability"),
+  snap=>{
+    firestoreData=[];
+    mirroredAirbnbData=[];
+
+    snap.forEach(ds=>{
+      const d=normalizeRecord(ds.data());
+
+      if(!d.checkIn || !d.checkOut || d.checkIn>=d.checkOut) return;
+
+      if(d.source==="airbnb"){
+        mirroredAirbnbData.push(d);
+      }else{
+        firestoreData.push(d);
+      }
+    });
+
+    directLive=true;
+
+    // If live Airbnb fetch is unavailable, mirrored Airbnb records from Firestore
+    // remain visible so booked dates do not suddenly turn AVAILABLE.
+    render();
+
+    const srcStatus=calendarSourceStatus();
+    setCalendarStatus(srcStatus.message,srcStatus.type);
+  },
+  err=>{
+    console.error(err);
+    directLive=false;
+    setStatus("⚠️ Firestore Calendar tidak dapat dibaca.",true);
+    setCalendarStatus("Calendar cloud gagal dibaca. Sila refresh sebentar lagi.", "bad");
+    render();
+  }
+);
+
+/* AIRBNB:
+   Fetch live sanitized availability from Cloudflare Pages Function on page load
+   and every 60 seconds while the page is open. No guest name, phone, payment or external ID returned. */
+
+function explainAirbnbError(err){
+  const raw=String(err?.message || err || "").trim();
+
+  if(/AIRBNB_ICAL_URL/i.test(raw)){
+    return "AIRBNB_ICAL_URL belum diset pada Netlify Environment Variables.";
+  }
+  if(/404|not found/i.test(raw)){
+    return "Cloudflare Pages Function airbnb-availability tidak ditemui pada deploy ini.";
+  }
+  if(/403|forbidden/i.test(raw)){
+    return "Akses Airbnb iCal ditolak. Semak semula link iCal Airbnb.";
+  }
+  if(/failed to fetch|network|load failed/i.test(raw)){
+    return "Sambungan ke Airbnb/Cloudflare Pages Function gagal.";
+  }
+  if(/bukan JSON/i.test(raw)){
+    return "Cloudflare Pages Function tidak pulangkan data JSON yang sah.";
+  }
+  if(/invalid|parse|ical|calendar/i.test(raw)){
+    return "Data Airbnb iCal tidak dapat dibaca. Semak AIRBNB_ICAL_URL.";
+  }
+  if(/HTTP 500/i.test(raw)){
+    return "Cloudflare Pages Function error 500. Selalunya AIRBNB_ICAL_URL belum diset atau link iCal bermasalah.";
+  }
+  if(/HTTP 404/i.test(raw)){
+    return "Cloudflare Pages Function belum tersedia pada site ini.";
+  }
+
+  return raw || "Airbnb Live Sync gagal atas sebab tidak diketahui.";
+}
+
+async function loadAirbnb(){
+  try{
+    setStatus("🔄 Auto Sync: semak Airbnb + Direct...");
+    const r=await fetch("/api/airbnb-availability?t="+Date.now(),{
+      cache:"no-store"
+    });
+
+    const text=await r.text();
+    let j;
+    try{ j=JSON.parse(text); }
+    catch{ throw new Error("Airbnb function bukan JSON."); }
+
+    if(!r.ok || j.error){
+      const detail=j?.error || j?.message || ("HTTP "+r.status);
+      throw new Error(detail);
+    }
+
+    airbnbData=Array.isArray(j.events)
+      ? j.events.map(x=>({
+          checkIn:String(x.checkIn||""),
+          checkOut:String(x.checkOut||""),
+          status:"booked",
+          source:"airbnb"
+        })).filter(x=>x.checkIn && x.checkOut && x.checkIn<x.checkOut)
+      : [];
+
+    airbnbLiveOk=true;
+    if($("airbnbDiagnostic")) $("airbnbDiagnostic").textContent="";
+
+    const t=new Date();
+    setStatus(`✅ Live Direct aktif • Airbnb ${airbnbData.length} rekod • dikemas kini ${t.toLocaleTimeString("ms-MY",{hour:"2-digit",minute:"2-digit"})}`);
+    setCalendarStatus(
+      `Live Calendar aktif • Direct ${firestoreData.length} • Airbnb Live ${airbnbData.length}`,
+      "ok"
+    );
+    render();
+  }catch(e){
+    console.error(e);
+    airbnbLiveOk=false;
+
+    const reason=explainAirbnbError(e);
+    if($("airbnbDiagnostic")) $("airbnbDiagnostic").textContent="Airbnb Live: "+reason;
+
+    // Important fallback:
+    // use sanitized Airbnb records already mirrored in Firestore/publicAvailability.
+    // This prevents Airbnb booked dates from becoming AVAILABLE if the Netlify
+    // function or AIRBNB_ICAL_URL environment variable is temporarily unavailable.
+    setStatus(
+      `⚠️ Airbnb Live Sync gagal • ${reason} • Guna backup Firebase ${mirroredAirbnbData.length} rekod.`,
+      true
+    );
+
+    if(mirroredAirbnbData.length){
+      setCalendarStatus(
+        firestoreData.length
+          ? `Backup Calendar aktif • Direct ${firestoreData.length} • Airbnb Firebase ${mirroredAirbnbData.length}`
+          : `Airbnb backup aktif ${mirroredAirbnbData.length} • Direct belum disync dari Admin`,
+        "warn"
+      );
+    }else{
+      setCalendarStatus(
+        "Airbnb Live Sync gagal dan backup Firebase belum ada. Sila sync Airbnb dari Admin.",
+        "bad"
+      );
+    }
+
+    render();
+  }
+}
+
+function isBooked(day){
+  const effectiveAirbnb = airbnbLiveOk ? airbnbData : mirroredAirbnbData;
+  const all=[...firestoreData,...effectiveAirbnb];
+
+  return all.some(b=>
+    b.status!=="cancelled" &&
+    b.checkIn &&
+    b.checkOut &&
+    day>=b.checkIn &&
+    day<b.checkOut
+  );
+}
+
+function stayOverlapsBooked(checkIn,checkOut){
+  const effectiveAirbnb=airbnbLiveOk ? airbnbData : mirroredAirbnbData;
+  return [...firestoreData,...effectiveAirbnb].some(b=>
+    b.status!=="cancelled" && b.checkIn && b.checkOut &&
+    checkIn < b.checkOut && checkOut > b.checkIn
+  );
+}
+
+function bookingSourcesReady(){
+  // Fail closed if Direct cloud is unreadable or Airbnb Live failed without any Firebase backup.
+  return directLive && (airbnbLiveOk || mirroredAirbnbData.length>0);
+}
+
+function calcBookingNights(){
+  const a=$("bookingCheckIn").value,b=$("bookingCheckOut").value;
+  let n=0;
+  if(a&&b) n=Math.max(0,Math.round((new Date(b+"T00:00:00")-new Date(a+"T00:00:00"))/86400000));
+  $("bookingNights").innerHTML=`Jumlah malam: <b>${n}</b>`;
+  return n;
+}
+
+function updateBookingLiveStatus(){
+  const el=$("bookingLiveStatus"),submit=$("bookingSubmit");
+  const a=$("bookingCheckIn").value,b=$("bookingCheckOut").value;
+  const today=iso(new Date());
+  const stop=(html,css)=>{el.innerHTML=html;el.style.cssText=css;submit.disabled=true};
+  if(!a||!b){stop("📅 Pilih Check-in dan Check-out.","background:#f8fafc;color:#475569;border:1px solid #cbd5e1");return;}
+  if(a<today){stop("⚠️ Check-in tidak boleh tarikh yang telah lepas.","background:#fffbeb;color:#92400e;border:1px solid #fde68a;font-weight:700");return;}
+  if(a>=b){stop("⚠️ Check-out mesti selepas Check-in.","background:#fffbeb;color:#92400e;border:1px solid #fde68a;font-weight:700");return;}
+  if(!bookingSourcesReady()){
+    stop("🔄 Semakan penuh Direct + Airbnb belum tersedia. Hantaran dihentikan sementara untuk elak double booking.","background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;font-weight:700");return;
+  }
+  if(stayOverlapsBooked(a,b)){
+    stop("🔴 BOOKED — sekurang-kurangnya satu malam dalam pilihan ini sudah ditempah. Sila tukar tarikh.","background:#fef2f2;color:#b91c1c;border:2px solid #fecaca;font-weight:700");return;
+  }
+  el.innerHTML="🟢 AVAILABLE — tarikh ini masih kosong. Boleh teruskan permintaan booking.";
+  el.style.cssText="background:#ecfdf5;color:#166534;border:2px solid #86efac;font-weight:700";
+  submit.disabled=false;
+}
+
+function openBookingForm(dateStr){
+  $("bookingCheckIn").value=dateStr;
+  $("bookingCheckOut").value=addDaysISO(dateStr,1);
+  $("bookingCheckIn").min=iso(new Date());
+  $("bookingCheckOut").min=addDaysISO(dateStr,1);
+  calcBookingNights();
+  updateBookingLiveStatus();
+  $("bookingModal").classList.add("open");
+  $("bookingModal").setAttribute("aria-hidden","false");
+  setTimeout(()=>$("bookingName").focus(),80);
+}
+
+function closeBookingForm(){
+  $("bookingModal").classList.remove("open");
+  $("bookingModal").setAttribute("aria-hidden","true");
+}
+
+async function submitBookingRequest(e){
+  e.preventDefault();
+  const nights=calcBookingNights();
+  const guestName=$("bookingName").value.trim();
+  const phone=$("bookingPhone").value.trim();
+  const residence=$("bookingResidence").value.trim();
+  const guests=Number($("bookingGuests").value)||1;
+  const checkIn=$("bookingCheckIn").value;
+  const checkOut=$("bookingCheckOut").value;
+
+  if(!guestName||!phone||!residence||!checkIn||!checkOut||nights<1){alert("Sila lengkapkan semua maklumat tempahan.");return;}
+  if(!bookingSourcesReady()){updateBookingLiveStatus();alert("Semakan Direct + Airbnb belum lengkap. Permintaan dihentikan sementara untuk elak double booking.");return;}
+  if(stayOverlapsBooked(checkIn,checkOut)){updateBookingLiveStatus();alert("🔴 TARIKH SUDAH BOOKED. Sila pilih tarikh lain.");return;}
+
+  const btn=$("bookingSubmit");
+  btn.disabled=true;btn.textContent="Menyimpan permintaan...";
+  try{
+    // Re-check immediately before writing the Pending request.
+    if(stayOverlapsBooked(checkIn,checkOut)) throw new Error("Tarikh baru sahaja ditempah. Sila pilih tarikh lain.");
+    const ref=await addDoc(collection(db,"bookingRequests"),{
+      guestName,phone,residence,guests,checkIn,checkOut,nights,
+      platform:"Direct",status:"Pending",source:"Calendar V2.1",
+      note:"Guest booking request dari Public Calendar — click AVAILABLE date",
+      createdAt:serverTimestamp(),updatedAt:serverTimestamp()
+    });
+    const requestId=ref.id;
+    const adminRequestUrl=ADMIN_URL+"?request="+encodeURIComponent(requestId);
+    const message=`🏡 *BOOKING ENQUIRY – THE 5R VILLA*
+
+Hi Admin, saya ingin membuat tempahan.
+
+👤 *Nama:* ${guestName}
+📞 *Telefon:* ${phone}
+📍 *Tinggal di:* ${residence}
+
+📅 *Check-in:* ${checkIn}
+📅 *Check-out:* ${checkOut}
+🌙 *Jumlah malam:* ${nights}
+👥 *Jumlah tetamu:* ${guests}
+
+🟢 Tarikh telah disemak melalui Live Calendar THE 5R VILLA.
+
+📝 *REQUEST ID:* ${requestId.slice(0,8).toUpperCase()}
+🟡 *STATUS: PENDING*
+Data telah dihantar ke Admin. Tidak perlu isi semula.
+
+🔔 *ADMIN: BOOKING BARU MENUNGGU TINDAKAN*
+Sila semak dan Confirm / Reject.
+
+👉 *BUKA ADMIN BOOKING:*
+${adminRequestUrl}`;
+    window.open(`https://wa.me/${ADMIN_WHATSAPP}?text=${encodeURIComponent(message)}`,"_blank");
+    closeBookingForm();
+    $("bookingForm").reset();
+    $("bookingGuests").value="1";
+    alert("✅ Permintaan booking telah direkod sebagai PENDING dan WhatsApp Admin dibuka.");
+  }catch(err){
+    console.error(err);
+    alert("Permintaan tidak dapat dihantar. "+(err?.message||err));
+  }finally{
+    btn.textContent="Teruskan Booking WhatsApp";
+    updateBookingLiveStatus();
+  }
+}
+
+$("bookingClose").addEventListener("click",closeBookingForm);
+$("bookingModal").addEventListener("click",e=>{if(e.target===$("bookingModal")) closeBookingForm()});
+$("bookingForm").addEventListener("submit",submitBookingRequest);
+["bookingCheckIn","bookingCheckOut"].forEach(id=>$(id).addEventListener("input",()=>{
+  if(id==="bookingCheckIn" && $("bookingCheckIn").value){
+    $("bookingCheckOut").min=addDaysISO($("bookingCheckIn").value,1);
+    if(!$("bookingCheckOut").value || $("bookingCheckOut").value<=$("bookingCheckIn").value) $("bookingCheckOut").value=addDaysISO($("bookingCheckIn").value,1);
+  }
+  calcBookingNights();updateBookingLiveStatus();
+}));
+
+function render(){
+  const y=view.getFullYear(),m=view.getMonth(),
+        first=new Date(y,m,1),
+        last=new Date(y,m+1,0),
+        start=first.getDay(),
+        today=iso(new Date());
+
+  const names=["Januari","Februari","Mac","April","Mei","Jun","Julai","Ogos","September","Oktober","November","Disember"];
+  $("month").textContent=names[m]+" "+y;
+
+  let out="";
+  for(let i=0;i<start;i++) out+='<div class="day empty"></div>';
+
+  for(let d=1;d<=last.getDate();d++){
+    const ds=iso(new Date(y,m,d));
+    const booked=isBooked(ds);
+
+    const past=ds<today;
+    const clickable=!booked&&!past;
+    out+=`<div class="day ${booked?"booked":""} ${ds===today?"today":""} ${past?"past":""} ${clickable?"available-click":""}" ${clickable?`data-date="${ds}" role="button" tabindex="0" aria-label="Pilih ${ds} untuk semak tempahan"`:""}>
+      <div class="num">${d}</div>
+      <div class="state ${booked?"bookedTxt":"availableTxt"}">${booked?"BOOKED":"AVAILABLE"}</div>
+    </div>`;
+  }
+  $("calendar").innerHTML=out;
+  $("calendar").querySelectorAll(".available-click").forEach(el=>{
+    const open=()=>openBookingForm(el.dataset.date);
+    el.addEventListener("click",open);
+    el.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();open();}});
+  });
+  if($("bookingModal").classList.contains("open")) updateBookingLiveStatus();
+}
+
+loadAirbnb();
+airbnbTimer=setInterval(loadAirbnb,60*1000);
+
+// When guest returns to the tab/app, refresh Airbnb immediately if possible.
+document.addEventListener("visibilitychange",()=>{
+  if(!document.hidden) loadAirbnb();
+});
+
+
+window.addEventListener("offline",()=>{
+  setCalendarStatus("Peranti offline. Paparan mungkin belum dikemas kini.", "warn");
+});
+window.addEventListener("online",()=>{
+  setCalendarStatus("Sambungan kembali online. Kalendar akan dikemas kini.", "ok");
+});
+</script></body></html>
